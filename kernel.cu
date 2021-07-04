@@ -8,17 +8,17 @@
 #include <curand.h>
 #include <curand_kernel.h>
 
-#define T 150 // время моделирования, какждая единица - один день 
-#define N 20480 // кол-во точек (людей) в данной системе (городе)
-#define RX 700 // размер коробки (города) по оси X
-#define RY 700 // размер коробки (города) по оси Y
-#define NOI 1 // кол-во изначально зараженных
-#define MAX_R 35 // максимальное перемещение точки (человека) по оси за день
-#define INF_R 3 // радиус заражения
-#define T_REC 20 // время выздоровления   
+#define T 150 // simulation time, each unit is one day 
+#define N 20480 // number of points (people) in this system (city)
+#define RX 700 // the size of the box (city) along the X axis
+#define RY 700 // the size of the box (city) along the Y axis
+#define NOI 1 // РєРѕР»-РІРѕ РёР·РЅР°С‡Р°Р»СЊРЅРѕ Р·Р°СЂР°Р¶РµРЅРЅС‹С…
+#define MAX_R 35 // Г¬Г ГЄГ±ГЁГ¬Г Г«ГјГ­Г®ГҐ ГЇГҐГ°ГҐГ¬ГҐГ№ГҐГ­ГЁГҐ ГІГ®Г·ГЄГЁ (Г·ГҐГ«Г®ГўГҐГЄГ ) ГЇГ® Г®Г±ГЁ Г§Г  Г¤ГҐГ­Гј
+#define INF_R 3 // Г°Г Г¤ГЁГіГ± Г§Г Г°Г Г¦ГҐГ­ГЁГї
+#define T_REC 20 // ГўГ°ГҐГ¬Гї ГўГ»Г§Г¤Г®Г°Г®ГўГ«ГҐГ­ГЁГї   
 
 
-// перемещение точек (людей) внутри системы (города) (CPU)
+// ГЇГҐГ°ГҐГ¬ГҐГ№ГҐГ­ГЁГҐ ГІГ®Г·ГҐГЄ (Г«ГѕГ¤ГҐГ©) ГўГ­ГіГІГ°ГЁ Г±ГЁГ±ГІГҐГ¬Г» (ГЈГ®Г°Г®Г¤Г ) (CPU)
 void coordinates_CPU (float *x, float *y, int i, int nt)
 {
 	x[nt * N + i] = x[(nt-1) * N + i] + 2 * MAX_R * ((float)rand() / RAND_MAX) - MAX_R;
@@ -31,7 +31,7 @@ void coordinates_CPU (float *x, float *y, int i, int nt)
 }
 
 
-// кто заболеет? (CPU)
+// ГЄГІГ® Г§Г ГЎГ®Г«ГҐГҐГІ? (CPU)
 void status_CPU (float *x, float *y, int *s, int i, int nt)
 {
 	float xx, yy, rr;
@@ -51,7 +51,7 @@ void status_CPU (float *x, float *y, int *s, int i, int nt)
 }
 
 
-// контроль (CPU)
+// ГЄГ®Г­ГІГ°Г®Г«Гј (CPU)
 void control_CPU(int *s, int *t, int *q, int nt, int i)
 {
 	if (s[i] == 1)
@@ -69,7 +69,7 @@ void control_CPU(int *s, int *t, int *q, int nt, int i)
 }
 
 
-// кто заболеет? (GPU)
+// ГЄГІГ® Г§Г ГЎГ®Г«ГҐГҐГІ? (GPU)
 __global__ void status_GPU(float *x, float *y, int *s, int nt)
 {
 	float xx, yy, rr;
@@ -90,7 +90,7 @@ __global__ void status_GPU(float *x, float *y, int *s, int nt)
 }
 
 
-// контроль (GPU)
+// ГЄГ®Г­ГІГ°Г®Г«Гј (GPU)
 __global__ void control_GPU(int *s, int *t, int nt)
 {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
@@ -174,7 +174,7 @@ int main()
 	}
 
 
-	//определяем начальные координаты
+	//Г®ГЇГ°ГҐГ¤ГҐГ«ГїГҐГ¬ Г­Г Г·Г Г«ГјГ­Г»ГҐ ГЄГ®Г®Г°Г¤ГЁГ­Г ГІГ»
 	for (int i = 0; i < N; i++)
 	{
 	    x_CPU[i] = RX * ((float)rand() / RAND_MAX) - RX / 2;
@@ -183,21 +183,21 @@ int main()
 		y_for_GPU[i] = y_CPU[i];
     }
 
-	//определяем начально зараженных
+	//Г®ГЇГ°ГҐГ¤ГҐГ«ГїГҐГ¬ Г­Г Г·Г Г«ГјГ­Г® Г§Г Г°Г Г¦ГҐГ­Г­Г»Гµ
 	for (int i = 0; i < NOI; i++)
 	{
 		s_CPU[i] = 1;
 	}
 	
 	
-	//определяем начально здоровых
+	//Г®ГЇГ°ГҐГ¤ГҐГ«ГїГҐГ¬ Г­Г Г·Г Г«ГјГ­Г® Г§Г¤Г®Г°Г®ГўГ»Гµ
 	for (int i = NOI; i < N; i++)
 	{
 		s_CPU[i] = 0;
 	}
 	
 
-	//записываем информацию о заболевших изначально
+	//Г§Г ГЇГЁГ±Г»ГўГ ГҐГ¬ ГЁГ­ГґГ®Г°Г¬Г Г¶ГЁГѕ Г® Г§Г ГЎГ®Г«ГҐГўГёГЁГµ ГЁГ§Г­Г Г·Г Г«ГјГ­Г®
 	q_CPU[0] = NOI;
 	q_for_GPU[0] = NOI;
 	for (int i = 1; i < T + 1; i++)
@@ -207,7 +207,7 @@ int main()
 	}
 
 
-	//CUDA вариант
+	//CUDA ГўГ Г°ГЁГ Г­ГІ
 	cudaEventRecord(start_GPU, 0);
 
 	cudaMemcpy(s_GPU, s_CPU, sizeof(int)*N, cudaMemcpyHostToDevice);
@@ -268,7 +268,7 @@ int main()
 
 
 
-	//CPU вариант
+	//CPU ГўГ Г°ГЁГ Г­ГІ
     start_CPU = clock();
 	for (int nt = 1; nt < T + 1; nt++)
 	{
